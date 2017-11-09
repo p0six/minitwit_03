@@ -51,6 +51,7 @@ mongo = PyMongo(app)
 
 def init_db():
     # Added for Session DB
+    # We can consider migrating this to MongoDB as well via http://flask.pocoo.org/snippets/110/
     session_app.app.session_interface.db.create_all()
 
 
