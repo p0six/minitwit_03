@@ -117,8 +117,7 @@ def api_add_message(client, text):
 def test_register(client):
     """Make sure registering works"""
     rv = register(client, 'user1', 'default')
-    assert b'You were successfully registered ' \
-           b'and can login now' in rv.data
+    assert b'You were successfully registered and can login now'
     rv = register(client, 'user1', 'default')
     assert b'The username is already taken' in rv.data
     rv = register(client, '', 'default')
