@@ -18,6 +18,7 @@ from flask import Flask, request, session, url_for, redirect, \
 from werkzeug import check_password_hash, generate_password_hash
 from flask_sessionstore import Session
 from flask_basicauth import BasicAuth
+from flask_pymongo import PyMongo
 
 
 class ApiBasicAuth(BasicAuth):
@@ -46,32 +47,33 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/minitwit.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = 'True'
 session_app = Session(app)
 api_basic_auth = ApiBasicAuth(app)
+mongo = PyMongo(app)
 
 def get_db():
     """Opens a new database connection if there is none yet for the
     current application context.
     """
-    top = _app_ctx_stack.top
-    if not hasattr(top, 'sqlite_db'):
-        top.sqlite_db = sqlite3.connect(app.config['DATABASE'])
-        top.sqlite_db.row_factory = sqlite3.Row
-    return top.sqlite_db
+    #top = _app_ctx_stack.top
+    #if not hasattr(top, 'sqlite_db'):
+    #    top.sqlite_db = sqlite3.connect(app.config['DATABASE'])
+    #    top.sqlite_db.row_factory = sqlite3.Row
+    #return top.sqlite_db
 
 
 @app.teardown_appcontext
 def close_database(exception):
     """Closes the database again at the end of the request."""
-    top = _app_ctx_stack.top
-    if hasattr(top, 'sqlite_db'):
-        top.sqlite_db.close()
+    #top = _app_ctx_stack.top
+    #if hasattr(top, 'sqlite_db'):
+    #    top.sqlite_db.close()
 
 
 def init_db():
     """Initializes the database."""
-    db = get_db()
-    with app.open_resource('schema.sql', mode='r') as f:
-        db.cursor().executescript(f.read())
-    db.commit()
+    #db = get_db()
+    #with app.open_resource('schema.sql', mode='r') as f:
+    #    db.cursor().executescript(f.read())
+    #db.commit()
     # Added for Session DB
     session_app.app.session_interface.db.create_all()
 
@@ -92,10 +94,31 @@ def initdb_command():
 
 def populate_db():
     """Initializes the database."""
-    db = get_db()
-    with app.open_resource('population.sql', mode='r') as f:
-        db.cursor().executescript(f.read())
-    db.commit()
+    mongo.db.users.drop()
+    mongo.db.follower.drop()
+    mongo.db.message.drop()
+    # https://docs.mongodb.com/manual/reference/operator/update-array/#update-operators
+    mongo.db.users.insert({'_id':'1', 'username':'mike','email':'romerom@gmail.com','pw_hash': 'pbkdf2:sha256:50000$7VKjFQZP$da63f8b89e016788e6e58245f242e13d55f73d15b83c47c6af606d92bbe1dd52'})
+    mongo.db.users.insert({'_id':'2', 'username':'ninjitsu','email':'romerom@csu.fullerton.edu','pw_hash': 'pbkdf2:sha256:50000$7VKjFQZP$da63f8b89e016788e6e58245f242e13d55f73d15b83c47c6af606d92bbe1dd52'})
+    mongo.db.users.insert({'_id':'3', 'username':'theromerom','email':'theromerom@yahoo.com','pw_hash': 'pbkdf2:sha256:50000$7VKjFQZP$da63f8b89e016788e6e58245f242e13d55f73d15b83c47c6af606d92bbe1dd52'})
+    mongo.db.users.insert({'_id':'4', 'username':'julia','email':'julia@email.com','pw_hash': 'pbkdf2:sha256:50000$7VKjFQZP$da63f8b89e016788e6e58245f242e13d55f73d15b83c47c6af606d92bbe1dd52'})
+
+    mongo.db.follower.insert({'who_id':'2', 'whom_id':'1'})
+    mongo.db.follower.insert({'who_id':'3', 'whom_id':'2'})
+    mongo.db.follower.insert({'who_id':'3', 'whom_id':'1'})
+    mongo.db.follower.insert({'who_id':'4', 'whom_id':'1'})
+    mongo.db.follower.insert({'who_id':'4', 'whom_id':'2'})
+    mongo.db.follower.insert({'who_id':'4', 'whom_id':'3'})
+
+    mongo.db.message.insert({'author_id':'1', 'text': 'i follow nobody. nerds!', 'pub_date':'1505497715'})
+    mongo.db.message.insert({'author_id':'2', 'text': 'i love candy', 'pub_date':'1505497635'})
+    mongo.db.message.insert({'author_id':'1', 'text': 'mikes second tweet', 'pub_date': '1505497645'})
+    mongo.db.message.insert({'author_id':'1', 'text': 'mike\'s third tweet!', 'pub_date':'1505497655'})
+    mongo.db.message.insert({'author_id':'2', 'text': 'ninjitsu the ginsu\'s 2nd!', 'pub_date':'1505497665'})
+    mongo.db.message.insert({'author_id':'3', 'text': 'wtf is a romerom numba 1!', 'pub_date':'1505497675'})
+    mongo.db.message.insert({'author_id':'3', 'text': 'romerom like romadon?', 'pub_date':'1505497685'})
+    mongo.db.message.insert({'author_id':'4', 'text': 'exeternal from ingress?', 'pub_date':'1505497695'})
+    mongo.db.message.insert({'author_id':'4', 'text': 'yes for sure?', 'pub_date':'1505497705'})
 
 
 @app.cli.command('populatedb')
@@ -121,9 +144,11 @@ def query_db(query, args=(), one=False):
 
 def get_user_id(username):
     """Convenience method to look up the id for a username."""
-    rv = query_db('select user_id from user where username = ?',
-                  [username], one=True)
-    return rv[0] if rv else None
+    #rv = query_db('select user_id from user where username = ?',
+    #              [username], one=True)
+    #return rv[0] if rv else None
+    rv = mongo.db.users.findOne({'username': username})['_id']
+    return rv if rv else None
 
 
 def format_datetime(timestamp):
@@ -141,8 +166,9 @@ def gravatar_url(email, size=80):
 def before_request():
     g.user = None
     if 'user_id' in session:
-        g.user = query_db('select * from user where user_id = ?',
-                          [session['user_id']], one=True)
+        #g.user = query_db('select * from user where user_id = ?',
+        #                  [session['user_id']], one=True)
+        g.user = mongo.db.users.findOne({'_id': [session['user_id']]})
 
 
 '''
@@ -154,13 +180,13 @@ def before_request():
 
 
 def query_home_timeline(user_id):
-    return query_db('''
-            select message.*, user.* from message, user
-            where message.author_id = user.user_id and (
-                user.user_id = ? or
-                user.user_id in (select whom_id from follower where who_id = ?))
-            order by message.pub_date desc limit ?''',
-                    [user_id, user_id, PER_PAGE])
+    #return query_db('''
+    #        select message.*, user.* from message, user
+    #        where message.author_id = user.user_id and (
+    #            user.user_id = ? or
+    #            user.user_id in (select whom_id from follower where who_id = ?))
+    #        order by message.pub_date desc limit ?''',
+    #                [user_id, user_id, PER_PAGE])
 
 
 def query_public_timeline():
