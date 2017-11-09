@@ -164,20 +164,18 @@ def query_messages(username):
 
 
 def query_followed(username, profile_username):
-    print query_db('''select 1 from follower where
-                follower.who_id = ? and follower.whom_id = ?''',
-                    [user_id, profile_username],
-                    one=True) is not None
-    #### TODO TODO TODO TODO ####
-    return mongo.db.users.find({})
+    if mongo.db.users.find({'username': username, 'following': [ profile_username ]}).count() > 0:
+        return True
+    else:
+      return False
 
 
 def query_follow_user(username, follower):
-    mongo.db.users.update({'username': username}, { "$push": {'followers': follower}}, {'multi': 'false'})
+    mongo.db.users.update({'username': username}, { "$push": {'following': follower}})
 
 
 def query_unfollow_user(username, follower):
-    mongo.db.users.update({'username': username}, { "$pull": {'followers': follower }}, {'multi': 'false'})
+    mongo.db.users.update({'username': username}, { "$pull": {'following': follower }})
 
 
 def query_add_message(username, message_text):
@@ -225,7 +223,6 @@ def api_public_timeline():
 
 
 # show messages posted by username
-# TODO: currently not doing anything with 'profile_user' or 'followed' here. Could consider adding to JSON response?
 @app.route('/api/statuses/user_timeline/<username>', methods=['GET'])
 def api_user_timeline(username):  # query_profile_user, query_followed, query_messages
     profile_user = query_profile_user(username)
@@ -233,7 +230,6 @@ def api_user_timeline(username):  # query_profile_user, query_followed, query_me
         abort(404)
     followed = False
     if g.user:
-        # TODO TODO TODO
         followed = query_followed(session['username'], username)
     messages = query_messages(username)
     my_values = []
@@ -340,7 +336,7 @@ def user_timeline(username):
     followed = False
     if g.user:
         followed = query_followed(session['username'], username)
-    return render_template('timeline.html', messages=query_messages(profile_user['username']), followed=followed,
+    return render_template('timeline.html', messages=query_messages(username), followed=followed,
                            profile_user=profile_user)
 
 
