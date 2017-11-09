@@ -411,13 +411,9 @@ def register():
         elif request.form['password'] != request.form['password2']:
             error = 'The two passwords do not match'
         elif get_user_id(request.form['username']) is not None:
-            print "herpy"
             error = 'The username is already taken'
         else:
-            mongo.db.users.insert({'username': request.form['username'],'email':
-                request.form['email'],'pw_hash': generate_password_hash(request.form['password']),
-                                   'followers':[], 'following': []})
-
+            mongo.db.users.insert({'username': request.form['username'],'email':request.form['email'],'pw_hash': generate_password_hash(request.form['password']),'followers':[], 'following': []})
             flash('You were successfully registered and can login now')
             return redirect(url_for('login'))
     return render_template('register.html', error=error)
