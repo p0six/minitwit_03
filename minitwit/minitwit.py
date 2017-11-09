@@ -82,15 +82,15 @@ def populate_db():
     mongo.db.users.insert({'username':'julia','email':'julia@email.com','pw_hash': 'pbkdf2:sha256:50000$7VKjFQZP$da63f8b89e016788e6e58245f242e13d55f73d15b83c47c6af606d92bbe1dd52',
       'followers':[], 'following': ['mike', 'ninjitsu', 'theromerom']})
 
-    mongo.db.messages.insert({'username': 'mike', 'email': 'romerom@gmail.com', 'text': 'i follow nobody. nerds!', 'pub_date':'1505497715'})
-    mongo.db.messages.insert({'username': 'ninjitsu', 'email': 'romerom@csu.fullerton.edu', 'text': 'i love candy', 'pub_date':'1505497635'})
-    mongo.db.messages.insert({'username': 'mike', 'email': 'romerom@gmail.com', 'text': 'mikes second tweet', 'pub_date': '1505497645'})
-    mongo.db.messages.insert({'username': 'mike', 'email': 'romerom@gmail.com', 'text': 'mike\'s third tweet!', 'pub_date':'1505497655'})
-    mongo.db.messages.insert({'username': 'ninjitsu', 'email': 'romerom@csu.fullerton.edu','text': 'ninjitsu the ginsu\'s 2nd!', 'pub_date':'1505497665'})
-    mongo.db.messages.insert({'username': 'theromerom', 'email': 'theromerom@yahoo.com', 'text': 'wtf is a romerom numba 1!', 'pub_date':'1505497675'})
-    mongo.db.messages.insert({'username': 'theromerom', 'email': 'theromerom@yahoo.com', 'text': 'romerom like romadon?', 'pub_date':'1505497685'})
-    mongo.db.messages.insert({'username': 'julia', 'email': 'julia@email.com', 'text': 'exeternal from ingress?', 'pub_date':'1505497695'})
-    mongo.db.messages.insert({'username': 'julia', 'email': 'julia@email.com', 'text': 'yes for sure?', 'pub_date':'1505497705'})
+    mongo.db.messages.insert({'username': 'mike', 'email': 'romerom@gmail.com', 'text': 'i follow nobody. nerds!', 'pub_date':1505497615})
+    mongo.db.messages.insert({'username': 'ninjitsu', 'email': 'romerom@csu.fullerton.edu', 'text': 'i love candy', 'pub_date':1505497635})
+    mongo.db.messages.insert({'username': 'mike', 'email': 'romerom@gmail.com', 'text': 'mikes second tweet', 'pub_date': 1505497645})
+    mongo.db.messages.insert({'username': 'mike', 'email': 'romerom@gmail.com', 'text': 'mike\'s third tweet!', 'pub_date':1505497655})
+    mongo.db.messages.insert({'username': 'ninjitsu', 'email': 'romerom@csu.fullerton.edu','text': 'ninjitsu the ginsu\'s 2nd!', 'pub_date':1505497665})
+    mongo.db.messages.insert({'username': 'theromerom', 'email': 'theromerom@yahoo.com', 'text': 'wtf is a romerom numba 1!', 'pub_date':1505497675})
+    mongo.db.messages.insert({'username': 'theromerom', 'email': 'theromerom@yahoo.com', 'text': 'romerom like romadon?', 'pub_date':1505497685})
+    mongo.db.messages.insert({'username': 'julia', 'email': 'julia@email.com', 'text': 'exeternal from ingress?', 'pub_date':1505497695})
+    mongo.db.messages.insert({'username': 'julia', 'email': 'julia@email.com', 'text': 'yes for sure?', 'pub_date':1505497705})
 
 
 @app.cli.command('populatedb')
@@ -152,23 +152,23 @@ def before_request():
 def query_home_timeline(username):
     user_rv = mongo.db.users.find_one({'username': username}, {'_id': 0})
     user_rv['following'].append(user_rv['username'])
-    return mongo.db.messages.find({'username': { "$in" : user_rv['following']}}).sort('pub_date', 1)
+    return mongo.db.messages.find({'username': { "$in" : user_rv['following']}}).sort('pub_date', -1)
 
 
 def query_public_timeline():
-    return mongo.db.messages.find({}).sort('pub_date', 1)
+    return mongo.db.messages.find({}).sort('pub_date', -1)
 
 
 def query_profile_user(username):
     return mongo.db.users.find_one({'username': username}, {'followers': 0, 'following': 0})
 
 def query_messages(username):
-    return mongo.db.messages.find({'username': username}).sort('pub_date', 1)
+    return mongo.db.messages.find({'username': username}).sort('pub_date', -1)
 
 
 def query_followed(username, profile_username):
     if mongo.db.users.find({'username': username, 'following': [ profile_username ]}).count() > 0:
-        return True
+      return True
     else:
       return False
 
@@ -183,7 +183,7 @@ def query_unfollow_user(username, follower):
 
 def query_add_message(username, message_text):
     user_rv = mongo.db.users.find_one({'username': username})
-    mongo.db.messages.insert({'username': username, 'text': message_text, 'pub_date': int(time.time()), 'email': user_rv['email']})
+    mongo.db.messages.insert({'username': username, 'text': message_text, 'pub_date': float(time.time()), 'email': user_rv['email']})
 
 
 def query_login(username):
