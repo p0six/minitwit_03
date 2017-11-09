@@ -107,13 +107,6 @@ def populatedb_command():
 '''
 
 
-def query_db(query, args=(), one=False):
-    """Queries the database and returns a list of dictionaries."""
-    #cur = get_db().execute(query, args)
-    #rv = cur.fetchall()
-    #return (rv[0] if rv else None) if one else rv
-
-
 def get_user_id(username):
     """Convenience method to look up the id for a username."""
     rv = mongo.db.users.find_one({ 'username' : username }, {'_id': 1})
