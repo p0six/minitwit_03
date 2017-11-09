@@ -116,8 +116,11 @@ def query_db(query, args=(), one=False):
 
 def get_user_id(username):
     """Convenience method to look up the id for a username."""
-    rv = mongo.db.users.find_one({'username': username})['_id']
-    return rv if rv else None
+    rv = mongo.db.users.find_one({ 'username' : username }, {'_id': 1})
+    if rv is not None:
+        return rv
+    else:
+        return None
 
 
 def format_datetime(timestamp):
@@ -414,14 +417,13 @@ def register():
         elif request.form['password'] != request.form['password2']:
             error = 'The two passwords do not match'
         elif get_user_id(request.form['username']) is not None:
+            print "herpy"
             error = 'The username is already taken'
         else:
-            db = get_db()
-            db.execute('''INSERT INTO user (
-              username, email, pw_hash) VALUES (?, ?, ?)''',
-                       [request.form['username'], request.form['email'],
-                        generate_password_hash(request.form['password'])])
-            db.commit()
+            mongo.db.users.insert({'username': request.form['username'],'email':
+                request.form['email'],'pw_hash': generate_password_hash(request.form['password']),
+                                   'followers':[], 'following': []})
+
             flash('You were successfully registered and can login now')
             return redirect(url_for('login'))
     return render_template('register.html', error=error)
