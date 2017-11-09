@@ -95,30 +95,26 @@ def initdb_command():
 def populate_db():
     """Initializes the database."""
     mongo.db.users.drop()
-    mongo.db.follower.drop()
-    mongo.db.message.drop()
+    mongo.db.messages.drop()
     # https://docs.mongodb.com/manual/reference/operator/update-array/#update-operators
-    mongo.db.users.insert({'_id':'1', 'username':'mike','email':'romerom@gmail.com','pw_hash': 'pbkdf2:sha256:50000$7VKjFQZP$da63f8b89e016788e6e58245f242e13d55f73d15b83c47c6af606d92bbe1dd52'})
-    mongo.db.users.insert({'_id':'2', 'username':'ninjitsu','email':'romerom@csu.fullerton.edu','pw_hash': 'pbkdf2:sha256:50000$7VKjFQZP$da63f8b89e016788e6e58245f242e13d55f73d15b83c47c6af606d92bbe1dd52'})
-    mongo.db.users.insert({'_id':'3', 'username':'theromerom','email':'theromerom@yahoo.com','pw_hash': 'pbkdf2:sha256:50000$7VKjFQZP$da63f8b89e016788e6e58245f242e13d55f73d15b83c47c6af606d92bbe1dd52'})
-    mongo.db.users.insert({'_id':'4', 'username':'julia','email':'julia@email.com','pw_hash': 'pbkdf2:sha256:50000$7VKjFQZP$da63f8b89e016788e6e58245f242e13d55f73d15b83c47c6af606d92bbe1dd52'})
+    mongo.db.users.insert({'username':'mike','email':'romerom@gmail.com', 'pw_hash': 'pbkdf2:sha256:50000$7VKjFQZP$da63f8b89e016788e6e58245f242e13d55f73d15b83c47c6af606d92bbe1dd52',
+      'followers': ['ninjitsu', 'theromerom', 'julia'], 'following': []})
+    mongo.db.users.insert({'username':'ninjitsu','email':'romerom@csu.fullerton.edu','pw_hash': 'pbkdf2:sha256:50000$7VKjFQZP$da63f8b89e016788e6e58245f242e13d55f73d15b83c47c6af606d92bbe1dd52',
+      'followers': ['theromerom', 'julia'], 'following': ['mike']})
+    mongo.db.users.insert({'username':'theromerom','email':'theromerom@yahoo.com','pw_hash': 'pbkdf2:sha256:50000$7VKjFQZP$da63f8b89e016788e6e58245f242e13d55f73d15b83c47c6af606d92bbe1dd52',
+      'followers':['julia'], 'following':['mike', 'ninjitsu']})
+    mongo.db.users.insert({'username':'julia','email':'julia@email.com','pw_hash': 'pbkdf2:sha256:50000$7VKjFQZP$da63f8b89e016788e6e58245f242e13d55f73d15b83c47c6af606d92bbe1dd52',
+      'followers':[], 'following': ['mike', 'ninjitsu', 'theromerom']})
 
-    mongo.db.follower.insert({'who_id':'2', 'whom_id':'1'})
-    mongo.db.follower.insert({'who_id':'3', 'whom_id':'2'})
-    mongo.db.follower.insert({'who_id':'3', 'whom_id':'1'})
-    mongo.db.follower.insert({'who_id':'4', 'whom_id':'1'})
-    mongo.db.follower.insert({'who_id':'4', 'whom_id':'2'})
-    mongo.db.follower.insert({'who_id':'4', 'whom_id':'3'})
-
-    mongo.db.message.insert({'author_id':'1', 'text': 'i follow nobody. nerds!', 'pub_date':'1505497715'})
-    mongo.db.message.insert({'author_id':'2', 'text': 'i love candy', 'pub_date':'1505497635'})
-    mongo.db.message.insert({'author_id':'1', 'text': 'mikes second tweet', 'pub_date': '1505497645'})
-    mongo.db.message.insert({'author_id':'1', 'text': 'mike\'s third tweet!', 'pub_date':'1505497655'})
-    mongo.db.message.insert({'author_id':'2', 'text': 'ninjitsu the ginsu\'s 2nd!', 'pub_date':'1505497665'})
-    mongo.db.message.insert({'author_id':'3', 'text': 'wtf is a romerom numba 1!', 'pub_date':'1505497675'})
-    mongo.db.message.insert({'author_id':'3', 'text': 'romerom like romadon?', 'pub_date':'1505497685'})
-    mongo.db.message.insert({'author_id':'4', 'text': 'exeternal from ingress?', 'pub_date':'1505497695'})
-    mongo.db.message.insert({'author_id':'4', 'text': 'yes for sure?', 'pub_date':'1505497705'})
+    mongo.db.messages.insert({'author_id':'1', 'email': 'romerom@gmail.com', 'username': 'mike', 'text': 'i follow nobody. nerds!', 'pub_date':'1505497715'})
+    mongo.db.messages.insert({'author_id':'2', 'email': 'romerom@csu.fullerton.com', 'username': 'ninjitsu', 'text': 'i love candy', 'pub_date':'1505497635'})
+    mongo.db.messages.insert({'author_id':'1', 'email': 'romerom@gmail.com', 'username': 'mike', 'text': 'mikes second tweet', 'pub_date': '1505497645'})
+    mongo.db.messages.insert({'author_id':'1', 'email': 'romerom@gmail.com','username': 'mike', 'text': 'mike\'s third tweet!', 'pub_date':'1505497655'})
+    mongo.db.messages.insert({'author_id':'2', 'email': 'romerom@csu.fullerton.com', 'username': 'ninjitsu', 'text': 'ninjitsu the ginsu\'s 2nd!', 'pub_date':'1505497665'})
+    mongo.db.messages.insert({'author_id':'3', 'email': 'theromerom@yahoo.com', 'username': 'theromerom', 'text': 'wtf is a romerom numba 1!', 'pub_date':'1505497675'})
+    mongo.db.messages.insert({'author_id':'3', 'email': 'theromerom@yahoo.com', 'username': 'theromerom',  'text': 'romerom like romadon?', 'pub_date':'1505497685'})
+    mongo.db.messages.insert({'author_id':'4', 'email': 'julia@email.com', 'username': 'julia',  'text': 'exeternal from ingress?', 'pub_date':'1505497695'})
+    mongo.db.messages.insert({'author_id':'4', 'email': 'julia@email.com', 'username': 'julia',  'text': 'yes for sure?', 'pub_date':'1505497705'})
 
 
 @app.cli.command('populatedb')
@@ -180,25 +176,25 @@ def before_request():
 
 
 def query_home_timeline(user_id):
-    #return query_db('''
-    #        select message.*, user.* from message, user
-    #        where message.author_id = user.user_id and (
-    #            user.user_id = ? or
-    #            user.user_id in (select whom_id from follower where who_id = ?))
-    #        order by message.pub_date desc limit ?''',
-    #                [user_id, user_id, PER_PAGE])
+    user_rv = mongo.db.users.find_one({'_id': user_id}, {'_id': 0})
+    user_rv['following'].append(user_rv['username'])
+    return mongo.db.messages.find({'username': { "$in" : user_rv['following']}}).sort('pub_date', -1)
 
 
 def query_public_timeline():
-    return query_db('''
-          select message.*, user.* from message, user
-          where message.author_id = user.user_id
-          order by message.pub_date desc limit ?''', [PER_PAGE])
+    return mongo.db.messages.find({}).sort('pub_date', -1)
 
 
 def query_profile_user(username):
-    return query_db('select * from user where username = ?',
-                    [username], one=True)
+    return mongo.db.users.findOne({'username': username}, {'followers': 0, 'following': 0})
+
+def query_messages(user_id):
+    #return query_db('''
+    #            select message.*, user.* from message, user where
+    #            user.user_id = message.author_id and user.user_id = ?
+    #            order by message.pub_date desc limit ?''',
+    #                [user_id, PER_PAGE])
+    return mongo.db.messages.find({'_id': user_id}).sort('pub_date', -1)
 
 
 def query_followed(user_id, profile_username):
@@ -208,39 +204,39 @@ def query_followed(user_id, profile_username):
                     one=True) is not None
 
 
-def query_messages(user_id):
-    return query_db('''
-                select message.*, user.* from message, user where
-                user.user_id = message.author_id and user.user_id = ?
-                order by message.pub_date desc limit ?''',
-                    [user_id, PER_PAGE])
+#def query_follow_user(user_id, whom_id):
+def query_follow_user(username, follower):
+    #db = get_db()
+    #db.execute('INSERT INTO follower (who_id, whom_id) VALUES (?, ?)',
+    #           [user_id, whom_id])
+    #db.commit()
+    mongo.db.users.update({'username': username}, { "$push": {'followers': follower}}, {'multi': 'false'})
 
 
-def query_follow_user(user_id, whom_id):
-    db = get_db()
-    db.execute('INSERT INTO follower (who_id, whom_id) VALUES (?, ?)',
-               [user_id, whom_id])
-    db.commit()
-
-
-def query_unfollow_user(user_id, whom_id):
-    db = get_db()
-    db.execute('DELETE FROM follower WHERE who_id=? AND whom_id=?',
-               [user_id, whom_id])
-    db.commit()
+#def query_unfollow_user(user_id, whom_id):
+def query_unfollow_user(username, follower):
+    #db = get_db()
+    #db.execute('DELETE FROM follower WHERE who_id=? AND whom_id=?',
+    #           [user_id, whom_id])
+    #db.commit()
+    mongo.db.users.update({'username': username}, { "$pull": {'followers': follower}}, {'multi': 'false'})
 
 
 def query_add_message(user_id, message_text):
-    db = get_db()
-    db.execute('''INSERT INTO message (author_id, text, pub_date)
-          VALUES (?, ?, ?)''', (user_id, message_text,
-                                int(time.time())))
-    db.commit()
+    #db = get_db()
+    #db.execute('''INSERT INTO message (author_id, text, pub_date)
+    #      VALUES (?, ?, ?)''', (user_id, message_text,
+    #                            int(time.time())))
+    #db.commit()
+    #mongo.db.messages.insert({'author_id':'4', 'email': 'julia@email.com', 'username': 'julia',  'text': 'yes for sure?', 'pub_date':'1505497705'})
+    user_rv = mongo.db.users.findOne({'_id': user_id})
+    mongo.db.messages.insert({'author_id': user_id, 'text': message_text, 'pub_date': int(time.time()), 'username': user_rv['username'], 'email': user_rv['email']})
 
 
 def query_login(username):
-    return query_db('''select * from user where
-            username = ?''', [username], one=True)
+    #return query_db('''select * from user where
+    #        username = ?''', [username], one=True)
+    return mongo.db.users.find({'username': username})
 
 
 '''
@@ -263,7 +259,7 @@ def api_home_timeline():
     my_values = []
     for message in messages:
         my_values.append(
-            {'username': message[5], 'email': message[6], 'text': message[2], 'datetime': format_datetime(message[3])})
+            {'username': message['username'], 'email': message['email'], 'text': message['text'], 'datetime': format_datetime(message['pub_date'])})
     return Response(json.dumps(my_values), 200, mimetype='application/json');
 
 
@@ -274,7 +270,7 @@ def api_public_timeline():
     my_values = []
     for message in messages:
         my_values.append(
-            {'username': message[5], 'email': message[6], 'text': message[2], 'datetime': format_datetime(message[3])})
+            {'username': message['username'], 'email': message['email'], 'text': message['text'], 'datetime': format_datetime(message['pub_date'])})
     return Response(json.dumps(my_values), 200, mimetype='application/json');
 
 
@@ -285,14 +281,15 @@ def api_user_timeline(username):  # query_profile_user, query_followed, query_me
     profile_user = query_profile_user(username)
     if profile_user is None:
         abort(404)
-    followed = False
-    if g.user:
-        followed = query_followed(session['user_id'], profile_user['user_id'])
-    messages = query_messages(profile_user['user_id'])
+    #followed = False
+    #if g.user:
+    #    followed = query_followed(session['user_id'], profile_user['user_id'])
+    #messages = query_messages(profile_user['user_id'])
+    messages = query_messages(profile_user['_id'])
     my_values = []
     for message in messages:
         my_values.append(
-            {'username': message[5], 'email': message[6], 'text': message[2], 'datetime': format_datetime(message[3])})
+            {'username': message['username'], 'email': message['email'], 'text': message['text'], 'datetime': format_datetime(message['pub_date'])})
     return Response(json.dumps(my_values), 200, mimetype='application/json');
 
 
