@@ -10,7 +10,7 @@
 """
 
 import time
-from sqlite3 import dbapi2 as sqlite3
+# from sqlite3 import dbapi2 as sqlite3
 from hashlib import md5
 from datetime import datetime
 from flask import Flask, request, session, url_for, redirect, \
@@ -31,7 +31,7 @@ class ApiBasicAuth(BasicAuth):
 
 
 # configuration
-DATABASE = '/tmp/minitwit.db'
+#DATABASE = '/tmp/minitwit.db'
 PER_PAGE = 30
 DEBUG = True
 SECRET_KEY = b'_5#y2L"F4Q8z\n\xec]/'
@@ -39,27 +39,29 @@ SECRET_KEY = b'_5#y2L"F4Q8z\n\xec]/'
 # create our little application :)
 app = Flask('minitwit')
 app.config.from_object(__name__)
-## No longer needed to have unique settings after Session DB reconfig
+# No longer needed to have unique settings after Session DB reconfigure
 # app.config.from_envvar('MINITWIT_SETTINGS', silent=True)
 # Session DB config..
-app.config['SESSION_TYPE'] = 'sqlalchemy'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/minitwit.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = 'True'
+#app.config['SESSION_TYPE'] = 'sqlalchemy'
+app.config['SESSION_TYPE'] = 'redis'
+#app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/minitwit.db'
+#app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = 'True'
 session_app = Session(app)
 api_basic_auth = ApiBasicAuth(app)
 mongo = PyMongo(app)
 
-def init_db():
+
+#def init_db():
     # Added for Session DB
     # We can consider migrating this to MongoDB as well via http://flask.pocoo.org/snippets/110/
-    session_app.app.session_interface.db.create_all()
+#    session_app.app.session_interface.db.create_all()
 
 
-@app.cli.command('initdb')
-def initdb_command():
-    """Creates the database tables."""
-    init_db()
-    print('Initialized the database.')
+#@app.cli.command('initdb')
+#def initdb_command():
+#    """Creates the database tables."""
+#    init_db()
+#    print('Initialized the database.')
 
 
 '''
@@ -74,24 +76,37 @@ def populate_db():
     mongo.db.users.drop()
     mongo.db.messages.drop()
 
-    mongo.db.users.insert({'username':'mike','email':'romerom@gmail.com', 'pw_hash': 'pbkdf2:sha256:50000$7VKjFQZP$da63f8b89e016788e6e58245f242e13d55f73d15b83c47c6af606d92bbe1dd52',
-      'followers': ['ninjitsu', 'theromerom', 'julia'], 'following': []})
-    mongo.db.users.insert({'username':'ninjitsu','email':'romerom@csu.fullerton.edu','pw_hash': 'pbkdf2:sha256:50000$7VKjFQZP$da63f8b89e016788e6e58245f242e13d55f73d15b83c47c6af606d92bbe1dd52',
-      'followers': ['theromerom', 'julia'], 'following': ['mike']})
-    mongo.db.users.insert({'username':'theromerom','email':'theromerom@yahoo.com','pw_hash': 'pbkdf2:sha256:50000$7VKjFQZP$da63f8b89e016788e6e58245f242e13d55f73d15b83c47c6af606d92bbe1dd52',
-      'followers':['julia'], 'following':['mike', 'ninjitsu']})
-    mongo.db.users.insert({'username':'julia','email':'julia@email.com','pw_hash': 'pbkdf2:sha256:50000$7VKjFQZP$da63f8b89e016788e6e58245f242e13d55f73d15b83c47c6af606d92bbe1dd52',
-      'followers':[], 'following': ['mike', 'ninjitsu', 'theromerom']})
+    mongo.db.users.insert({'username': 'mike', 'email': 'romerom@gmail.com',
+                           'pw_hash': 'pbkdf2:sha256:50000$7VKjFQZP$da63f8b89e016788e6e58245f242e13d55f73d15b83c47c6af606d92bbe1dd52',
+                           'followers': ['ninjitsu', 'theromerom', 'julia'], 'following': []})
+    mongo.db.users.insert({'username': 'ninjitsu', 'email': 'romerom@csu.fullerton.edu',
+                           'pw_hash': 'pbkdf2:sha256:50000$7VKjFQZP$da63f8b89e016788e6e58245f242e13d55f73d15b83c47c6af606d92bbe1dd52',
+                           'followers': ['theromerom', 'julia'], 'following': ['mike']})
+    mongo.db.users.insert({'username': 'theromerom', 'email': 'theromerom@yahoo.com',
+                           'pw_hash': 'pbkdf2:sha256:50000$7VKjFQZP$da63f8b89e016788e6e58245f242e13d55f73d15b83c47c6af606d92bbe1dd52',
+                           'followers': ['julia'], 'following': ['mike', 'ninjitsu']})
+    mongo.db.users.insert({'username': 'julia', 'email': 'julia@email.com',
+                           'pw_hash': 'pbkdf2:sha256:50000$7VKjFQZP$da63f8b89e016788e6e58245f242e13d55f73d15b83c47c6af606d92bbe1dd52',
+                           'followers': [], 'following': ['mike', 'ninjitsu', 'theromerom']})
 
-    mongo.db.messages.insert({'username': 'mike', 'email': 'romerom@gmail.com', 'text': 'i follow nobody. nerds!', 'pub_date':1505497615})
-    mongo.db.messages.insert({'username': 'ninjitsu', 'email': 'romerom@csu.fullerton.edu', 'text': 'i love candy', 'pub_date':1505497635})
-    mongo.db.messages.insert({'username': 'mike', 'email': 'romerom@gmail.com', 'text': 'mikes second tweet', 'pub_date': 1505497645})
-    mongo.db.messages.insert({'username': 'mike', 'email': 'romerom@gmail.com', 'text': 'mike\'s third tweet!', 'pub_date':1505497655})
-    mongo.db.messages.insert({'username': 'ninjitsu', 'email': 'romerom@csu.fullerton.edu','text': 'ninjitsu the ginsu\'s 2nd!', 'pub_date':1505497665})
-    mongo.db.messages.insert({'username': 'theromerom', 'email': 'theromerom@yahoo.com', 'text': 'wtf is a romerom numba 1!', 'pub_date':1505497675})
-    mongo.db.messages.insert({'username': 'theromerom', 'email': 'theromerom@yahoo.com', 'text': 'romerom like romadon?', 'pub_date':1505497685})
-    mongo.db.messages.insert({'username': 'julia', 'email': 'julia@email.com', 'text': 'exeternal from ingress?', 'pub_date':1505497695})
-    mongo.db.messages.insert({'username': 'julia', 'email': 'julia@email.com', 'text': 'yes for sure?', 'pub_date':1505497705})
+    mongo.db.messages.insert({'username': 'mike', 'email': 'romerom@gmail.com', 'text': 'i follow nobody. nerds!',
+                              'pub_date': 1505497615})
+    mongo.db.messages.insert({'username': 'ninjitsu', 'email': 'romerom@csu.fullerton.edu', 'text': 'i love candy',
+                              'pub_date': 1505497635})
+    mongo.db.messages.insert({'username': 'mike', 'email': 'romerom@gmail.com', 'text': 'mikes second tweet',
+                              'pub_date': 1505497645})
+    mongo.db.messages.insert({'username': 'mike', 'email': 'romerom@gmail.com', 'text': 'mike\'s third tweet!',
+                              'pub_date': 1505497655})
+    mongo.db.messages.insert({'username': 'ninjitsu', 'email': 'romerom@csu.fullerton.edu',
+                              'text': 'ninjitsu the ginsu\'s 2nd!', 'pub_date': 1505497665})
+    mongo.db.messages.insert({'username': 'theromerom', 'email': 'theromerom@yahoo.com',
+                              'text': 'wtf is a romerom numba 1!', 'pub_date': 1505497675})
+    mongo.db.messages.insert({'username': 'theromerom', 'email': 'theromerom@yahoo.com',
+                              'text': 'romerom like romadon?', 'pub_date': 1505497685})
+    mongo.db.messages.insert({'username': 'julia', 'email': 'julia@email.com', 'text': 'exeternal from ingress?',
+                              'pub_date': 1505497695})
+    mongo.db.messages.insert({'username': 'julia', 'email': 'julia@email.com', 'text': 'yes for sure?',
+                              'pub_date': 1505497705})
 
 
 @app.cli.command('populatedb')
@@ -110,7 +125,7 @@ def populatedb_command():
 
 def get_user_id(username):
     """Convenience method to look up the id for a username."""
-    rv = mongo.db.users.find_one({ 'username' : username }, {'_id': 1})
+    rv = mongo.db.users.find_one({'username': username}, {'_id': 1})
     if rv is not None:
         return rv
     else:
@@ -146,7 +161,7 @@ def before_request():
 def query_home_timeline(username):
     user_rv = mongo.db.users.find_one({'username': username}, {'_id': 0})
     user_rv['following'].append(user_rv['username'])
-    return mongo.db.messages.find({'username': { "$in" : user_rv['following']}}).sort('pub_date', -1)
+    return mongo.db.messages.find({'username': {"$in": user_rv['following']}}).sort('pub_date', -1)
 
 
 def query_public_timeline():
@@ -156,28 +171,30 @@ def query_public_timeline():
 def query_profile_user(username):
     return mongo.db.users.find_one({'username': username}, {'followers': 0, 'following': 0})
 
+
 def query_messages(username):
     return mongo.db.messages.find({'username': username}).sort('pub_date', -1)
 
 
 def query_followed(username, profile_username):
-    if mongo.db.users.find({'username': username, 'following': [ profile_username ]}).count() > 0:
-      return True
+    if mongo.db.users.find({'username': username, 'following': [profile_username]}).count() > 0:
+        return True
     else:
-      return False
+        return False
 
 
 def query_follow_user(username, follower):
-    mongo.db.users.update({'username': username}, { "$push": {'following': follower}})
+    mongo.db.users.update({'username': username}, {"$push": {'following': follower}})
 
 
 def query_unfollow_user(username, follower):
-    mongo.db.users.update({'username': username}, { "$pull": {'following': follower }})
+    mongo.db.users.update({'username': username}, {"$pull": {'following': follower}})
 
 
 def query_add_message(username, message_text):
     user_rv = mongo.db.users.find_one({'username': username})
-    mongo.db.messages.insert({'username': username, 'text': message_text, 'pub_date': float(time.time()), 'email': user_rv['email']})
+    mongo.db.messages.insert({'username': username, 'text': message_text, 'pub_date': float(time.time()),
+                              'email': user_rv['email']})
 
 
 def query_login(username):
@@ -204,8 +221,9 @@ def api_home_timeline():
     my_values = []
     for message in messages:
         my_values.append(
-            {'username': message['username'], 'email': message['email'], 'text': message['text'], 'datetime': format_datetime(message['pub_date'])})
-    return Response(json.dumps(my_values), 200, mimetype='application/json');
+            {'username': message['username'], 'email': message['email'], 'text': message['text'],
+             'datetime': format_datetime(message['pub_date'])})
+    return Response(json.dumps(my_values), 200, mimetype='application/json')
 
 
 # show the public timeline for everyone
@@ -215,8 +233,9 @@ def api_public_timeline():
     my_values = []
     for message in messages:
         my_values.append(
-            {'username': message['username'], 'email': message['email'], 'text': message['text'], 'datetime': format_datetime(message['pub_date'])})
-    return Response(json.dumps(my_values), 200, mimetype='application/json');
+            {'username': message['username'], 'email': message['email'], 'text': message['text'],
+             'datetime': format_datetime(message['pub_date'])})
+    return Response(json.dumps(my_values), 200, mimetype='application/json')
 
 
 # show messages posted by username
@@ -225,15 +244,13 @@ def api_user_timeline(username):  # query_profile_user, query_followed, query_me
     profile_user = query_profile_user(username)
     if profile_user is None:
         abort(404)
-    followed = False
-    if g.user:
-        followed = query_followed(session['username'], username)
     messages = query_messages(username)
     my_values = []
     for message in messages:
         my_values.append(
-            {'username': message['username'], 'email': message['email'], 'text': message['text'], 'datetime': format_datetime(message['pub_date'])})
-    return Response(json.dumps(my_values), 200, mimetype='application/json');
+            {'username': message['username'], 'email': message['email'], 'text': message['text'],
+             'datetime': format_datetime(message['pub_date'])})
+    return Response(json.dumps(my_values), 200, mimetype='application/json')
 
 
 # add the authenticated user to the followers of the specified user
@@ -242,7 +259,7 @@ def api_follow_user():
     if not g.user:
         abort(401)
     username = request.get_json()[0]["username"]
-    whom_id = get_user_id(username) # we want this to remain
+    whom_id = get_user_id(username)
     if whom_id is None:
         abort(404)
     query_follow_user(session['username'], username)
@@ -254,7 +271,7 @@ def api_follow_user():
 def api_unfollow_user(username):
     if not g.user:
         abort(401)
-    whom_id = get_user_id(username) # we want this to remain..
+    whom_id = get_user_id(username)
     if whom_id is None:
         abort(404)
     query_unfollow_user(session['username'], username)
@@ -279,7 +296,7 @@ def api_login():
         return redirect(url_for('api_home_timeline'))
     error = None
     if request.method == 'GET':
-        my_args = request.args.to_dict();
+        my_args = request.args.to_dict()
         user = query_login(my_args['username'])
         if user is None:
             error = 'Invalid username'
@@ -403,8 +420,9 @@ def register():
     if request.method == 'POST':
         if not request.form['username']:
             error = 'You have to enter a username'
-        elif not request.form['email'] or \
-                        '@' not in request.form['email']:
+        #  elif not request.form['email'] or \
+        #                '@' not in request.form['email']:
+        elif not request.form['email'] or '@' not in request.form['email']:
             error = 'You have to enter a valid email address'
         elif not request.form['password']:
             error = 'You have to enter a password'
@@ -413,7 +431,9 @@ def register():
         elif get_user_id(request.form['username']) is not None:
             error = 'The username is already taken'
         else:
-            mongo.db.users.insert({'username': request.form['username'],'email':request.form['email'],'pw_hash': generate_password_hash(request.form['password']),'followers':[], 'following': []})
+            mongo.db.users.insert({'username': request.form['username'], 'email': request.form['email'],
+                                   'pw_hash': generate_password_hash(request.form['password']),
+                                   'followers': [], 'following': []})
             flash('You were successfully registered and can login now')
             return redirect(url_for('login'))
     return render_template('register.html', error=error)
