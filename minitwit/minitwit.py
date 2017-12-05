@@ -179,13 +179,24 @@ def query_home_timeline(username):
         return loads(r.get(username + '_hometimeline'))
 
 def query_public_timeline():
+    redis_timeline = r.get('publictimeline')
+    if (redis_timeline):
+        return loads(redis_timeline)
+    else:
+        timeline = mongo.db.messages.find({}).sort('pub_date', -1)
+        r.set('publictimeline', dumps(timeline), ex=30)
+        return loads(r.get('publictimeline'))
 
-    return mongo.db.messages.find({}).sort('pub_date', -1)
 
 
 def query_profile_user(username):
-    return mongo.db.users.find_one({'username': username}, {'followers': 0, 'following': 0})
-
+    redis_timeline = r.get(username + '_profile')
+    if (redis_timeline):
+        return loads(redis_timeline)
+    else:
+        timeline = mongo.db.users.find_one({'username': username}, {'followers': 0, 'following': 0})
+        r.set(username + '_profile', dumps(timeline), ex=30)
+        return loads(r.get(username + '_profile'))
 
 def query_messages(username):
     return mongo.db.messages.find({'username': username}).sort('pub_date', -1)
