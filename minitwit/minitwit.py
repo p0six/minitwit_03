@@ -10,6 +10,8 @@
 """
 
 import time
+import redis
+import pickle
 # from sqlite3 import dbapi2 as sqlite3
 from hashlib import md5
 from datetime import datetime
@@ -19,6 +21,10 @@ from werkzeug import check_password_hash, generate_password_hash
 from flask_sessionstore import Session
 from flask_basicauth import BasicAuth
 from flask_pymongo import PyMongo
+from bson.json_util import dumps, loads
+
+from bson.binary import Binary
+
 
 
 class ApiBasicAuth(BasicAuth):
@@ -29,6 +35,9 @@ class ApiBasicAuth(BasicAuth):
         else:
             return False
 
+r = redis.Redis(
+    host='localhost',
+    port=6379)
 
 # configuration
 #DATABASE = '/tmp/minitwit.db'
@@ -159,12 +168,18 @@ def before_request():
 
 
 def query_home_timeline(username):
-    user_rv = mongo.db.users.find_one({'username': username}, {'_id': 0})
-    user_rv['following'].append(user_rv['username'])
-    return mongo.db.messages.find({'username': {"$in": user_rv['following']}}).sort('pub_date', -1)
-
+    redis_timeline = r.get(username + '_hometimeline')
+    if(redis_timeline):
+        return loads(redis_timeline)
+    else:
+        user_rv = mongo.db.users.find_one({'username': username}, {'_id': 0})
+        user_rv['following'].append(user_rv['username'])
+        timeline = mongo.db.messages.find({'username': {"$in": user_rv['following']}}).sort('pub_date', -1)
+        r.set(username + '_hometimeline', dumps(timeline), ex=30)
+        return loads(r.get(username + '_hometimeline'))
 
 def query_public_timeline():
+
     return mongo.db.messages.find({}).sort('pub_date', -1)
 
 
