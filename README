@@ -21,12 +21,16 @@
       3. tell flask about the right application:
 
          export FLASK_APP=minitwit
+         
+      5. make it easy to debug on the web using:
+      
+         export FLASK_DEBUG=1
 
-      4. fire up a shell and run this:
+      5. fire up a shell and run this:
 
          flask initdb
 
-      5. now you can run minitwit:
+      6. now you can run minitwit:
 
          flask run
 
