@@ -221,14 +221,14 @@ def query_followed(username, profile_username):
 def query_follow_user(username, follower):
     mongo.db.users.update({'username': username}, {"$push": {'following': follower}})
     r.delete(username + '_hometimeline')
-    r.delete(username + '_api_hometimeline')
+    # r.delete(username + '_api_hometimeline')
     r.delete(username + '_' + follower + '_query_followed')
 
 
 def query_unfollow_user(username, follower):
     mongo.db.users.update({'username': username}, {"$pull": {'following': follower}})
     r.delete(username + '_hometimeline')
-    r.delete(username + '_api_hometimeline')
+    # r.delete(username + '_api_hometimeline')
     r.delete(username + '_' + follower + '_query_followed')
 
 
@@ -239,10 +239,10 @@ def query_add_message(username, message_text):
     user_rv['followers'].append(user_rv['username'])
     for user in user_rv['followers']:
        r.delete(user + '_hometimeline')
-       r.delete(user + '_api_hometimeline')
+       # r.delete(user + '_api_hometimeline')
     r.delete(username + '_profile')
     r.delete(username + '_messages')
-    r.delete(username + '_api_usertimeline')
+    # r.delete(username + '_api_usertimeline')
 
 
 def query_login(username):
@@ -265,72 +265,51 @@ def query_login(username):
 ------------------
 '''
 
-
 # show the timeline for the authenticated user
 @app.route('/api/statuses/home_timeline', methods=['GET'])
 def api_home_timeline():
-    username = session.get('username')
-    if username is None:
-        return Response("You need to log in first", 404, mimetype='text/xml')
+    if not g.user:
+        return redirect(url_for('api_public_timeline'))
     else:
-        redis_timeline = r.get(session['username'] + '_api_hometimeline')
-        if redis_timeline:
-            return Response(redis_timeline, 200, mimetype='application/json')
-        else:
-            messages = query_home_timeline(session['username'])
-            values = []
-            for x in messages:
-                values.append({
-                    'username':x['username'],
-                    'text':x['text'],
-                    'email':x['email'],
-                    'pub_date':x['pub_date']
-                    })
-            r.set(session['username'] + '_api_hometimeline', dumps(values), ex=30)
-            return Response(r.get(session['username'] + '_api_hometimeline'), 200, mimetype='application/type')
-
-
+        messages = query_home_timeline(session['username'])
+        my_values = []
+        for message in messages:
+            my_values.append({
+                'username':message['username'],
+                'email':message['email'],
+                'text':message['text'],
+                'datetime':format_datetime(message['pub_date'])
+                })
+    return Response(json.dumps(my_values), 200, mimetype='application/json')
 
 @app.route('/api/statuses/public_timeline', methods=['GET', 'DELETE'])
 def api_public_timeline():
-    redis_timeline = r.get('api_publictimeline')
-    # print("this is redis", type(redis_timeline), redis_timeline)
-    #if data not in redis then set it
-    if redis_timeline:
-        return Response(redis_timeline,200,mimetype='application/json')
-    else:
-        timeline = mongo.db.messages.find({}).sort('pub_date', -1)
-        values = []
-        for x in timeline:
-            values.append({
-                'username':x['username'],
-                'text':x['text'],
-                'email':x['email'],
-                'pub_date':x['pub_date']
-                })
-        r.set('api_publictimeline', dumps(values), ex=30)
-        return Response(r.get('api_publictimeline'),200,mimetype='application/json')
+    messages = query_public_timeline()
+    my_values = []
+    for message in messages:
+        my_values.append({
+            'username': message['username'],
+            'email': message['email'], 
+            'text': message['text'],
+            'datetime': format_datetime(message['pub_date'])})
+    return Response(json.dumps(my_values), 200, mimetype='application/json')
 
 
 # show messages posted by username
 @app.route('/api/statuses/user_timeline/<username>', methods=['GET'])
 def api_user_timeline(username):  # query_profile_user, query_followed, query_messages
-    redis_timeline = r.get(username + '_api_usertimeline')
-    if redis_timeline:
-        return Response(redis_timeline, 200, mimetype='application/json')
-    else:
-        timeline = query_messages(username)
-        # print(timeline)
-        values = []
-        for x in timeline:
-            values.append({
-                'username':x['username'],
-                'text':x['text'],
-                'email':x['email'],
-                'pub_date':x['pub_date']
-                })
-        r.set((username + '_api_usertimeline'),dumps(values), ex=30)
-        return Response(r.get(username + '_api_usertimeline'), 200, mimetype='application/json')
+    profile_user = query_profile_user(username)
+    if profile_user is None:
+        abort(404)
+    messages = query_messages(username)
+    my_values = []
+    for message in messages:
+        my_values.append({
+            'username': message['username'], 
+            'email': message['email'], 
+            'text': message['text'],
+            'datetime': format_datetime(message['pub_date'])})
+    return Response(json.dumps(my_values), 200, mimetype='application/json')
 
 # add the authenticated user to the followers of the specified user
 @app.route('/api/friendships/create', methods=['POST'])
