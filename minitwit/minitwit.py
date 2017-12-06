@@ -221,14 +221,12 @@ def query_followed(username, profile_username):
 def query_follow_user(username, follower):
     mongo.db.users.update({'username': username}, {"$push": {'following': follower}})
     r.delete(username + '_hometimeline')
-    # r.delete(username + '_api_hometimeline')
     r.delete(username + '_' + follower + '_query_followed')
 
 
 def query_unfollow_user(username, follower):
     mongo.db.users.update({'username': username}, {"$pull": {'following': follower}})
     r.delete(username + '_hometimeline')
-    # r.delete(username + '_api_hometimeline')
     r.delete(username + '_' + follower + '_query_followed')
 
 
@@ -239,10 +237,8 @@ def query_add_message(username, message_text):
     user_rv['followers'].append(user_rv['username'])
     for user in user_rv['followers']:
        r.delete(user + '_hometimeline')
-       # r.delete(user + '_api_hometimeline')
     r.delete(username + '_profile')
     r.delete(username + '_messages')
-    # r.delete(username + '_api_usertimeline')
 
 
 def query_login(username):
