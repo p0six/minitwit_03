@@ -240,100 +240,68 @@ def query_login(username):
 # show the timeline for the authenticated user
 @app.route('/api/statuses/home_timeline', methods=['GET'])
 def api_home_timeline():
-    redis_timeline = r.get('api_home_timeline')
-    #if data not in redis then set it
-    if redis_timeline is None:
-        timeline = query_home_timeline(session['username'])
-        value = []
-        for data in timeline:
-            value.append({
-                'username':data['username'],
-                'email':data['email'],
-                'text':data['text']
-                'datetime':format_datetime(data['pub_date'])
-                })
-        # return Response(r.set('api_publictimeline', json.dumps(value)), 200, mimetype='application/json')
-        r.set('api_home_timeline', json.dumps(value))
-        return Response(json.dumps(value), 200, mimetype='application/json')
+    username = session.get('username')
+    if username is None:
+        return Response("You need to log in first", 404, mimetype='text/xml')
     else:
-        #data in redis
-        return Response(json.loads(redis_timeline), 200, mimetype='application/json')
+        redis_timeline = r.get(session['username'] + '_timeline')
+        if redis_timeline:
+            return Response(redis_timeline, 200, mimetype='application/json')
+        else:
+            messages = query_home_timeline(session['username'])
+            values = []
+            for x in messages:
+                values.append({
+                    'username':x['username'],
+                    'text':x['text'],
+                    'email':x['email'],
+                    'pub_date':x['pub_date']
+                    })
+            r.set(session['username'] + '_timeline', dumps(values), ex=30)
+            return Response(r.get(session['username'] + '_timeline'), 200, mimetype='application/type')
 
 
-    # if not g.user:
-    #     return redirect(url_for('api_public_timeline'))
-    # messages = query_home_timeline(session['username'])
-    # my_values = []
-    # for message in messages:
-    #     my_values.append(
-    #         {'username': message['username'], 'email': message['email'], 'text': message['text'],
-    #          'datetime': format_datetime(message['pub_date'])})
-    # return Response(json.dumps(my_values), 200, mimetype='application/json')
 
-
-# show the public timeline for everyone
 @app.route('/api/statuses/public_timeline', methods=['GET', 'DELETE'])
 def api_public_timeline():
     redis_timeline = r.get('api_publictimeline')
+    # print("this is redis", type(redis_timeline), redis_timeline)
     #if data not in redis then set it
-    if redis_timeline is None:
-        timeline = mongo.db.messages.find({}).sort('pub_date', -1)
-        value = []
-        for data in timeline:
-            value.append({
-                'username':data['username'],
-                'email':data['email'],
-                'text':data['text']
-                'datetime':format_datetime(data['pub_date'])
-                })
-        # return Response(r.set('api_publictimeline', json.dumps(value)), 200, mimetype='application/json')
-        r.set('api_publictimeline', json.dumps(value))
-        return Response(json.dumps(value), 200, mimetype='application/json')
+    if redis_timeline:
+        return Response(redis_timeline,200,mimetype='application/json')
     else:
-        #data in redis
-        return Response(json.loads(redis_timeline), 200, mimetype='application/json')
-
-
-
-
-    # messages = query_public_timeline()
-    # my_values = []
-    # for message in messages:
-    #     my_values.append(
-    #         {'username': message['username'], 'email': message['email'], 'text': message['text'],
-    #          'datetime': format_datetime(message['pub_date'])})
-    # return Response(json.dumps(my_values), 200, mimetype='application/json')
+        timeline = mongo.db.messages.find({}).sort('pub_date', -1)
+        values = []
+        for x in timeline:
+            values.append({
+                'username':x['username'],
+                'text':x['text'],
+                'email':x['email'],
+                'pub_date':x['pub_date']
+                })
+        r.set('api_publictimeline', dumps(values), ex=30)
+        return Response(r.get('api_publictimeline'),200,mimetype='application/json')
 
 
 # show messages posted by username
 @app.route('/api/statuses/user_timeline/<username>', methods=['GET'])
 def api_user_timeline(username):  # query_profile_user, query_followed, query_messages
     redis_timeline = r.get(username + '_timeline')
-    if redis_timeline is None:
-        #if data not in redis then set it
-        timeline = mongo.db.users.find_one({'username': username}, {'followers': 0, 'following': 0})
-        value = []
-        for data in timeline:
-            value.append({
-                'username':data['username'],
-                'email':data['email'],
-                'text':data['text']
-                'datetime':format_datetime(data['pub_date'])
-                })
-        r.set(usrname + '_publictimeline', json.dumps(value))
-        return Response(json.dumps(value), 200, mimetype='application/json')
+    if redis_timeline:
+        return Response(redis_timeline, 200, mimetype='application/json')
     else:
-        return Response(json.loads(redis_timeline), 200, mimetype='application/json')
-    # profile_user = query_profile_user(username)
-    # if profile_user is None:
-    #     abort(404)
-    # messages = query_messages(username)
-    # my_values = []
-    # for message in messages:
-    #     my_values.append(
-    #         {'username': message['username'], 'email': message['email'], 'text': message['text'],
-    #          'datetime': format_datetime(message['pub_date'])})
-    # return Response(json.dumps(my_values), 200, mimetype='application/json')
+        timeline = query_messages(username)
+        # print(timeline)
+        values = []
+        for x in timeline:
+            values.append({
+                'username':x['username'],
+                'text':x['text'],
+                'email':x['email'],
+                'pub_date':x['pub_date']
+                })
+        r.set((username + '_timeline'),dumps(values), ex=30)
+        return Response(r.get(username + '_timeline'), 200, mimetype='application/json')
 
 # add the authenticated user to the followers of the specified user
 @app.route('/api/friendships/create', methods=['POST'])
