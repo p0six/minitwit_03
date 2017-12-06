@@ -198,7 +198,13 @@ def query_profile_user(username):
         return loads(r.get(username + '_profile'))
 
 def query_messages(username):
-    return mongo.db.messages.find({'username': username}).sort('pub_date', -1)
+    redis_messages = r.get(username + '_messages')
+    if (redis_messages):
+        return loads(redis_messages)
+    else:
+        messages = mongo.db.messages.find({'username': username}).sort('pub_date', -1)
+        r.set(username + '_messages', dumps(messages), ex=30)
+        return loads(r.get(username + '_messages'))
 
 
 def query_followed(username, profile_username):
@@ -210,16 +216,21 @@ def query_followed(username, profile_username):
 
 def query_follow_user(username, follower):
     mongo.db.users.update({'username': username}, {"$push": {'following': follower}})
+    r.delete(username + '_hometimeline')
 
 
 def query_unfollow_user(username, follower):
     mongo.db.users.update({'username': username}, {"$pull": {'following': follower}})
+    r.delete(username + '_hometimeline')
 
 
 def query_add_message(username, message_text):
     user_rv = mongo.db.users.find_one({'username': username})
     mongo.db.messages.insert({'username': username, 'text': message_text, 'pub_date': float(time.time()),
                               'email': user_rv['email']})
+    r.delete(username + '_hometimeline')
+    r.delete(username + '_profile')
+    r.delete(username + '_messages')
 
 
 def query_login(username):
