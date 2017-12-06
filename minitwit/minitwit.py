@@ -184,7 +184,7 @@ def query_public_timeline():
         return loads(redis_timeline)
     else:
         timeline = mongo.db.messages.find({}).sort('pub_date', -1)
-        r.set('publictimeline', dumps(timeline), ex=30)
+        r.set('publictimeline', dumps(timeline), ex=60)
         return loads(r.get('publictimeline'))
 
 
@@ -203,38 +203,56 @@ def query_messages(username):
         return loads(redis_messages)
     else:
         messages = mongo.db.messages.find({'username': username}).sort('pub_date', -1)
-        r.set(username + '_messages', dumps(messages), ex=30)
+        r.set(username + '_messages', dumps(messages), ex=60)
         return loads(r.get(username + '_messages'))
 
 
 def query_followed(username, profile_username):
-    if mongo.db.users.find({'username': username, 'following': [profile_username]}).count() > 0:
-        return True
-    else:
-        return False
+    redis_followed = r.get(username + '_' + profile_username + '_query_followed')
+    if redis_followed is None:
+        if mongo.db.users.find({'username': username, 'following': [profile_username]}).count() > 0:
+            redis_followed = True
+        else:
+            redis_followed = False
+        r.set(username + '_' + profile_username + '_query_followed', redis_followed, ex=30)
+    return redis_followed
 
 
 def query_follow_user(username, follower):
     mongo.db.users.update({'username': username}, {"$push": {'following': follower}})
     r.delete(username + '_hometimeline')
+    r.delete(username + '_api_hometimeline')
+    r.delete(username + '_' + follower + '_query_followed')
 
 
 def query_unfollow_user(username, follower):
     mongo.db.users.update({'username': username}, {"$pull": {'following': follower}})
     r.delete(username + '_hometimeline')
+    r.delete(username + '_api_hometimeline')
+    r.delete(username + '_' + follower + '_query_followed')
 
 
 def query_add_message(username, message_text):
     user_rv = mongo.db.users.find_one({'username': username})
     mongo.db.messages.insert({'username': username, 'text': message_text, 'pub_date': float(time.time()),
                               'email': user_rv['email']})
-    r.delete(username + '_hometimeline')
+    user_rv['followers'].append(user_rv['username'])
+    for user in user_rv['followers']:
+       r.delete(user + '_hometimeline')
+       r.delete(user + '_api_hometimeline')
     r.delete(username + '_profile')
     r.delete(username + '_messages')
+    r.delete(username + '_api_usertimeline')
 
 
 def query_login(username):
-    return mongo.db.users.find_one({'username': username})
+    redis_query_login = r.get(username + '_query_login')
+    if (redis_query_login):
+        return loads(redis_query_login)
+    else:
+        query = mongo.db.users.find_one({'username': username})
+        r.set(username + '_query_login', dumps(query), ex=60)
+        return loads(r.get(username + '_query_login'))
 
 
 '''
@@ -255,7 +273,7 @@ def api_home_timeline():
     if username is None:
         return Response("You need to log in first", 404, mimetype='text/xml')
     else:
-        redis_timeline = r.get(session['username'] + '_timeline')
+        redis_timeline = r.get(session['username'] + '_api_hometimeline')
         if redis_timeline:
             return Response(redis_timeline, 200, mimetype='application/json')
         else:
@@ -268,8 +286,8 @@ def api_home_timeline():
                     'email':x['email'],
                     'pub_date':x['pub_date']
                     })
-            r.set(session['username'] + '_timeline', dumps(values), ex=30)
-            return Response(r.get(session['username'] + '_timeline'), 200, mimetype='application/type')
+            r.set(session['username'] + '_api_hometimeline', dumps(values), ex=30)
+            return Response(r.get(session['username'] + '_api_hometimeline'), 200, mimetype='application/type')
 
 
 
@@ -297,7 +315,7 @@ def api_public_timeline():
 # show messages posted by username
 @app.route('/api/statuses/user_timeline/<username>', methods=['GET'])
 def api_user_timeline(username):  # query_profile_user, query_followed, query_messages
-    redis_timeline = r.get(username + '_timeline')
+    redis_timeline = r.get(username + '_api_usertimeline')
     if redis_timeline:
         return Response(redis_timeline, 200, mimetype='application/json')
     else:
@@ -311,8 +329,8 @@ def api_user_timeline(username):  # query_profile_user, query_followed, query_me
                 'email':x['email'],
                 'pub_date':x['pub_date']
                 })
-        r.set((username + '_timeline'),dumps(values), ex=30)
-        return Response(r.get(username + '_timeline'), 200, mimetype='application/json')
+        r.set((username + '_api_usertimeline'),dumps(values), ex=30)
+        return Response(r.get(username + '_api_usertimeline'), 200, mimetype='application/json')
 
 # add the authenticated user to the followers of the specified user
 @app.route('/api/friendships/create', methods=['POST'])
@@ -323,7 +341,7 @@ def api_follow_user():
     whom_id = get_user_id(username)
     if whom_id is None:
         abort(404)
-    query_follow_user(session['username'], username)
+    query_follow_user(session['username'], username)  # redis invalidation done inside this function...
     return Response(json.dumps({'status': 'successfulFollow', 'whom': username}), 200, mimetype='application/json')
 
 
@@ -335,7 +353,7 @@ def api_unfollow_user(username):
     whom_id = get_user_id(username)
     if whom_id is None:
         abort(404)
-    query_unfollow_user(session['username'], username)
+    query_unfollow_user(session['username'], username)  # redis invalidation done inside this function...
     return Response(json.dumps({'status': 'successfulUnfollow', 'whom': username}), 200, mimetype='application/json')
 
 
@@ -346,7 +364,7 @@ def api_add_message():
         abort(401)
     message_text = request.get_json()[0]["message"]
     if message_text:
-        query_add_message(session['username'], message_text)
+        query_add_message(session['username'], message_text)  # redis invalidation done inside this function..
     return Response(json.dumps({'status': 'successfulMessage'}), 200, mimetype='application/json')
 
 
