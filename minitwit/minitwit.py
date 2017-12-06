@@ -134,11 +134,17 @@ def populatedb_command():
 
 def get_user_id(username):
     """Convenience method to look up the id for a username."""
-    rv = mongo.db.users.find_one({'username': username}, {'_id': 1})
-    if rv is not None:
-        return rv
+    redis_uid = r.get(username + '_get_user_id')
+    if redis_uid is None:
+        rv = mongo.db.users.find_one({'username': username}, {'_id': 1})
+        if rv is not None:
+            r.set(username + '_get_user_id', dumps(rv), ex=60)
+            return loads(r.get(username + '_get_user_id'))
+        else:
+            r.set(username + '_get_user_id', None, ex=60)
+            return None
     else:
-        return None
+        return loads(redis_uid)
 
 
 def format_datetime(timestamp):
@@ -278,6 +284,7 @@ def api_home_timeline():
                 })
     return Response(json.dumps(my_values), 200, mimetype='application/json')
 
+
 @app.route('/api/statuses/public_timeline', methods=['GET', 'DELETE'])
 def api_public_timeline():
     messages = query_public_timeline()
@@ -306,6 +313,7 @@ def api_user_timeline(username):  # query_profile_user, query_followed, query_me
             'text': message['text'],
             'datetime': format_datetime(message['pub_date'])})
     return Response(json.dumps(my_values), 200, mimetype='application/json')
+
 
 # add the authenticated user to the followers of the specified user
 @app.route('/api/friendships/create', methods=['POST'])
